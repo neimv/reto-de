@@ -1,0 +1,115 @@
+"""
+Description: Models to use with the extractor is the same as WS
+"""
+
+import os
+
+from sqlalchemy import (
+    create_engine, Column, Integer, String, Float, relationship,
+    ForeignKey, Table
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+
+def get_engine():
+    user = os.getenv("USERDB")
+    password = os.getenv("PASSWD_DB")
+    host = os.getenv("HOST_DB")
+    port = os.getenv("HOST_DB")
+    db = os.getenv("DB")
+
+    if user is None:
+        raise Exception("User is required")
+    elif password is None:
+        raise Exception("Password is required")
+    elif host is None:
+        raise Exception("Host is required")
+    elif port is None:
+        raise Exception("Port is required")
+    elif db is None:
+        raise Exception("Database is required")
+
+    engine = create_engine(
+        f'postgresql://{user}:{password}@{host}:{port}/{db}'
+    )
+
+    return engine
+
+
+engine = get_engine()
+Session = sessionmaker(bind=engine)
+session = Session()
+
+Base = declarative_base()
+
+
+association_table = Table('person_deparment', Base.metadata,
+    Column('person_id', ForeignKey('person.id'), primary_key=True),
+    Column('deparment_id', ForeignKey('deparment.id'), primary_key=True)
+)
+
+
+class Person(Base):
+    __tablename__ = 'person'
+
+    id = Column(Integer, primary_key=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+
+    # Relations
+    company = relationship("Company", back_populates="person", uselist=False)
+    phone = relationship("Phone", back_populates="person")
+
+
+class Company(Base):
+    __tablename__ = 'company'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    address = Column(String, nullable=False)
+    codezip = Column(String, nullable=False)
+
+    person_id = Column(Integer, ForeignKey('person.id'))
+    person = relationship("Person", back_populates="companies")
+    state = relationship("State", back_populates="companies")
+
+
+class Deparment(Base):
+    __tablename__ = 'deparment'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+
+
+class Phone(Base):
+    __tablename__ = 'phone'
+
+    id = Column(Integer, primary_key=True)
+    phone_number = Column(String, nullable=False)
+
+    person_id = Column(Integer, ForeignKey('person.id'))
+    person = relationship("Person", back_populates="phones")
+
+
+class State(Base):
+    __tablename__ = 'state'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+
+    city = relationship("city", back_populates="state")
+    company_id = Column(Integer, ForeignKey="company.id")
+    company = relationship("company", back_populates="states")
+
+
+class City(Base):
+    __tablename__ = 'city'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+
+    state_id = Column(Integer, ForeignKey('state.id'))
+    state = relationship("State", back_populates="cities")
+
