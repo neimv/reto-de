@@ -1,0 +1,59 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=V:67012:h
+      - POSTGRES_DB=neimv
+      - POSTGRES_USER=neimv
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "neimv"]
+      interval: 5s
+      retries: 5
+    restart: always
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8088:8080
+
+  init:
+    build:
+      context: ./services
+      dockerfile: init.Dockerfile
+    environment:
+      - START_DB=true
+    env_file:
+      - services/.env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  ws:
+    build:
+      context: ./services
+      dockerfile: ws.Dockerfile
+    env_file:
+      - services/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 8000:8000
+
+  ws-etl:
+    build:
+      context: ./services
+      dockerfile: ws_etl.Dockerfile
+    env_file:
+      - services/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 8001:8000
